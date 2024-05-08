@@ -35,13 +35,29 @@ def generate_image_by_prompt(prompt, output_path, save_previews=False):
         web_socket_helper.ws.close()
 
 
-def generate_image_by_prompt_and_image(prompt, output_path, input_path, filename, save_previews=False):
+def generate_image_by_prompt_and_image(prompt, output_path, input_path, filename=None, save_previews=False):
     try:
-        upload_image(input_path, filename, web_socket_helper.server_addr)
+        if filename:
+            upload_image(input_path, filename, web_socket_helper.server_addr)
         prompt_id = queue_prompt(prompt, web_socket_helper.client_id, web_socket_helper.server_addr)['prompt_id']
         track_progress(prompt, web_socket_helper.ws, prompt_id)
         images = get_images(prompt_id, web_socket_helper.server_addr, save_previews)
         save_image(images, output_path, save_previews)
+    finally:
+        if web_socket_helper is None:
+            print(f'web_socket is not initialize yet.')
+            return
+        web_socket_helper.ws.close()
+
+
+def generate_video_by_prompt_and_image(prompt, output_path, input_path, filename=None, save_previews=False):
+    try:
+        if filename:
+            upload_image(input_path, filename, web_socket_helper.server_addr)
+        prompt_id = queue_prompt(prompt, web_socket_helper.client_id, web_socket_helper.server_addr)['prompt_id']
+        track_progress(prompt, web_socket_helper.ws, prompt_id)
+        videos = get_videos(prompt_id, web_socket_helper.server_addr, save_previews)
+        save_video(videos, output_path, save_previews)
     finally:
         if web_socket_helper is None:
             print(f'web_socket is not initialize yet.')
@@ -56,6 +72,17 @@ def save_image(images, output_path, save_previews):
         try:
             image = Image.open(io.BytesIO(itm['image_data']))
             image.save(os.path.join(directory, itm['file_name']))
+        except Exception as e:
+            print(f"Failed to save image {itm['file_name']}: {e}")
+
+
+def save_video(videos, output_path, save_previews):
+    for itm in videos:
+        directory = os.path.join(output_path, 'temp/') if itm['type'] == 'temp' and save_previews else output_path
+        os.makedirs(directory, exist_ok=True)
+        try:
+            with open(os.path.join(directory, itm['file_name']), 'wb') as f:
+                f.write(itm['video_data'])
         except Exception as e:
             print(f"Failed to save image {itm['file_name']}: {e}")
 
@@ -93,7 +120,6 @@ def track_progress(prompt, ws, prompt_id):
 
 def get_images(prompt_id, server_address, allow_preview=False):
     output_images = []
-
     history = get_history(prompt_id, server_address)[prompt_id]
     for node_id in history['outputs']:
         node_output = history['outputs'][node_id]
@@ -111,6 +137,27 @@ def get_images(prompt_id, server_address, allow_preview=False):
         output_images.append(output_data)
 
     return output_images
+
+
+def get_videos(prompt_id, server_address, allow_preview=False):
+    output_videos = []
+    history = get_history(prompt_id, server_address)[prompt_id]
+    for node_id in history['outputs']:
+        node_output = history['outputs'][node_id]
+        output_data = {}
+        if 'gifs' in node_output:
+            for video in node_output['gifs']:
+                if allow_preview and video['type'] == 'temp':
+                    preview_data = get_image(video['filename'], video['subfolder'], video['type'], server_address)
+                    output_data['video_data'] = preview_data
+                if video['type'] == 'output':
+                    video_data = get_image(video['filename'], video['subfolder'], video['type'], server_address)
+                    output_data['video_data'] = video_data
+        output_data['file_name'] = video['filename']
+        output_data['type'] = video['type']
+        output_videos.append(output_data)
+
+    return output_videos
 
 
 def clear():
