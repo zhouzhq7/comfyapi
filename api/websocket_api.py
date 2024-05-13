@@ -14,6 +14,7 @@ def upload_image(input_path, name, server_address, image_type="input", overwrite
             }
         )
 
+
         data = multipart_data
         headers = {'Content-Type': multipart_data.content_type}
         request = urllib.request.Request("http://{}/upload/image".format(server_address), data=data, headers=headers)
