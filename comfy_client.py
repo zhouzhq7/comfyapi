@@ -23,8 +23,8 @@ class ComfyClient:
         if len(data_to_upload) > 0:
             upload_data(data_to_upload, self.server_addr)
         prompt_id = queue_prompt(prompt, self.client_id, self.server_addr)['prompt_id']
-        track_progress(prompt, self.ws, prompt_id)
-        output_images, output_videos = get_outputs(prompt_id, self.server_addr, save_previews)
+        output_prompt_id = track_progress(prompt, self.ws, prompt_id)
+        output_images, output_videos = get_outputs(output_prompt_id, self.server_addr, save_previews)
         if len(output_images):
             save_image(output_images, output_path, save_previews)
         if len(output_videos):
@@ -95,6 +95,7 @@ def track_progress(prompt, ws, prompt_id):
     finished_nodes = []
     finished = True
     has_unfinished_batch = False
+    final_prompt_id = prompt_id
     while True:
         out = ws.recv()
         if isinstance(out, str):
@@ -109,8 +110,8 @@ def track_progress(prompt, ws, prompt_id):
                     has_unfinished_batch = True
                 else:
                     if has_unfinished_batch:
-                        cur_prompt_id = data['prompt_id']
-                        print(f'Finished, final prompt id {cur_prompt_id}, original prompt id {prompt_id}.')
+                        final_prompt_id = data['prompt_id']
+                        print(f'Finished, final prompt id {final_prompt_id}, original prompt id {prompt_id}.')
                     finished = True
             if message['type'] == 'progress':
                 current_step = data['value']
@@ -134,7 +135,7 @@ def track_progress(prompt, ws, prompt_id):
                         break
         else:
             continue  # previews are binary data
-    return
+    return final_prompt_id
 
 
 def get_outputs(prompt_id, server_address, allow_preview=False):
@@ -170,23 +171,3 @@ def get_outputs(prompt_id, server_address, allow_preview=False):
 
     return output_images, output_videos
 
-
-def get_videos(prompt_id, server_address, allow_preview=False):
-    output_videos = []
-    history = get_history(prompt_id, server_address)[prompt_id]
-    for node_id in history['outputs']:
-        node_output = history['outputs'][node_id]
-        output_data = {}
-        if 'gifs' in node_output:
-            for video in node_output['gifs']:
-                if allow_preview and video['type'] == 'temp':
-                    preview_data = get_image(video['filename'], video['subfolder'], video['type'], server_address)
-                    output_data['video_data'] = preview_data
-                if video['type'] == 'output':
-                    video_data = get_image(video['filename'], video['subfolder'], video['type'], server_address)
-                    output_data['video_data'] = video_data
-        output_data['file_name'] = video['filename']
-        output_data['type'] = video['type']
-        output_videos.append(output_data)
-
-    return output_videos
