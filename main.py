@@ -1,7 +1,6 @@
 from comfy_client import ComfyClient
 from utils import load_workflow
 
-
 def main():
     print("Welcome to the program!")
     # comfy_client = ComfyClient(ip='877328s68c.vicp.fun', port=43592)

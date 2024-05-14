@@ -1,17 +1,18 @@
-# comfyui-api
+# comfyapi
 
-Install missing packages via `requirements.txt`
+### Usage Example
+Simple example shows how to use ComfyClient
+```python
+comfy_client = ComfyClient(ip='127.0.0.1', port=8288)
+workflow = load_workflow('./workflows/ImageStylization.json')
+user_inputs = {'PortraitImage': './input/daisy_avatar.jpg',
+               'StyleImage': './input/Starry-Night-canvas-Vincent-van-Gogh-New-1889.png',
+               'PositivePrompt': 'a girl portrait stand in front a river'}
+comfy_client.run_workflow(workflow, user_inputs)
+```
 
-`pip install -r requirements.txt`
+### ComfyUI Node Title for Input
+Title of node for user input should follow certain format,
 
-## Using the API
-
-You need to a comfyUI server running and be able to access the "/ws" path for this server. If you have the server running localy it usually runs under "127.0.0.1:8188".
-If this is not the case for you, change the `server_address` in the `basic_api.py`.
-
-In the workflow folder are two basic Workflows:
-- base_workflow.json
-- baisc_image_to_image
-
-For simple prompt to image generation load the `base_workflow.json` and call `prompt_to_image` method with your desired parameters.
-For image to image generation load the `basic_image_to_image.json` and put your input image in the input folder. Call `prompt_image_to_image` with your desired parameters.# comfyui_api
+**[Input]-KeyWord**, such as [Input]-StyleImage
+![sample_comfy.png](imgs%2Fsample_comfy.png)
