@@ -2,68 +2,62 @@ import json
 from PIL import Image
 import io
 import os
+import websocket  # NOTE: websocket-client (https://github.com/websocket-client/websocket-client)
+import uuid
 
-# Assuming the import paths are correct and the methods are defined elsewhere:
-from api.websocket_api import queue_prompt, get_history, get_image, upload_image, clear_comfy_cache
-from api.open_websocket import open_websocket_connection
+from api.websocket_api import queue_prompt, get_history, get_image, upload_data, clear_comfy_cache
 
 
-class WebSocketHelper:
+class ComfyClient:
     def __init__(self, ip, port):
         self.ip = ip
         self.port = port
-        self.ws, self.server_addr, self.client_id = open_websocket_connection(ip, port)
+        self.ws, self.server_addr, self.client_id = open_websocket_connection(self.ip, self.port)
 
+    def run_workflow(self, workflow, user_inputs, output_path='./output', save_previews=False):
+        prompt, data_to_upload = prepare_inputs(workflow, user_inputs)
+        self.post_to_comfy_server(prompt, data_to_upload, output_path=output_path, save_previews=save_previews)
+        pass
 
-web_socket_helper: WebSocketHelper = None
-
-
-def generate_image_by_prompt(prompt, output_path, save_previews=False):
-    try:
-        if web_socket_helper is None:
-            print(f'web_socket is not initialize yet, return')
-            return
-        # ws, server_address, client_id = open_websocket_connection()
-        prompt_id = queue_prompt(prompt, web_socket_helper.client_id, web_socket_helper.server_addr)['prompt_id']
-        track_progress(prompt, web_socket_helper.ws, prompt_id)
-        images = get_images(prompt_id, web_socket_helper.server_addr, save_previews)
+    def post_to_comfy_server(self, prompt, data_to_upload, output_path='./output', save_previews=False):
+        if len(data_to_upload) > 0:
+            upload_data(data_to_upload, self.server_addr)
+        prompt_id = queue_prompt(prompt, self.client_id, self.server_addr)['prompt_id']
+        track_progress(prompt, self.ws, prompt_id)
+        images = get_images(prompt_id, self.server_addr, save_previews)
         save_image(images, output_path, save_previews)
-    finally:
-        if web_socket_helper is None:
-            print(f'web_socket is not initialize yet.')
-            return
-        web_socket_helper.ws.close()
 
 
-def generate_image_by_prompt_and_image(prompt, output_path, input_path, filename=None, save_previews=False):
-    try:
-        upload_image(input_path, filename, None)
-        if filename:
-            upload_image(input_path, filename, web_socket_helper.server_addr)
-        prompt_id = queue_prompt(prompt, web_socket_helper.client_id, web_socket_helper.server_addr)['prompt_id']
-        track_progress(prompt, web_socket_helper.ws, prompt_id)
-        images = get_images(prompt_id, web_socket_helper.server_addr, save_previews)
-        save_image(images, output_path, save_previews)
-    finally:
-        if web_socket_helper is None:
-            print(f'web_socket is not initialize yet.')
-            return
-        web_socket_helper.ws.close()
+def open_websocket_connection(ip='127.0.0.1', port=8288):
+    server_address = f'{ip}:{port}'
+    client_id = str(uuid.uuid4())
+
+    ws = websocket.WebSocket()
+    ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
+    return ws, server_address, client_id
 
 
-def generate_video_by_prompt_and_image(prompt, output_path, input_path, filename=None, save_previews=False):
-    try:
-        if filename:
-            upload_image(input_path, filename, web_socket_helper.server_addr)
-        prompt_id = queue_prompt(prompt, web_socket_helper.client_id, web_socket_helper.server_addr)['prompt_id']
-        track_progress(prompt, web_socket_helper.ws, prompt_id)
-        videos = get_videos(prompt_id, web_socket_helper.server_addr, save_previews)
-        save_video(videos, output_path, save_previews)
-    finally:
-        if web_socket_helper is None:
-            print(f'web_socket is not initialize yet.')
-            return
-        web_socket_helper.ws.close()
+def prepare_inputs(workflow, user_inputs):
+    prompt = json.loads(workflow)
+    id_to_class_title = {id: details['_meta']['title'] for id, details in prompt.items()}
+    input_nodes = [key for key, value in id_to_class_title.items() if value.startswith('[Input]')]
+    data_to_upload = []
+    for input_node in input_nodes:
+        input_key = id_to_class_title.get(input_node).split('-')[1]
+        if input_key in user_inputs:
+            if prompt.get(input_node)['class_type'] == 'LoadImage':
+                prompt.get(input_node)['inputs']['image'] = user_inputs.get(input_key).split('/')[-1]
+                data_to_upload.append({'filepath': user_inputs.get(input_key), 'type': 'image'})
+            else:
+                if 'string' in prompt.get(input_node)['inputs']:
+                    prompt.get(input_node)['inputs']['string'] = user_inputs.get(input_key)
+                else:
+                    class_type = input_node['class_type']
+                    raise TypeError(f'Input type {class_type} is not a valid input for this workflow')
+        else:
+            raise ValueError(f'Input key {input_key} not found in user inputs')
+
+    return prompt, data_to_upload
 
 
 def save_image(images, output_path, save_previews):
@@ -159,7 +153,3 @@ def get_videos(prompt_id, server_address, allow_preview=False):
         output_videos.append(output_data)
 
     return output_videos
-
-
-def clear():
-    clear_comfy_cache()

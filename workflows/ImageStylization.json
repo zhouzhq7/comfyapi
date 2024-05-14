@@ -1,9 +1,9 @@
 {
   "3": {
     "inputs": {
-      "seed": 364336476784093,
+      "seed": 385873272520649,
       "steps": 30,
-      "cfg": 6.5,
+      "cfg": 7.5,
       "sampler_name": "dpmpp_2m",
       "scheduler": "karras",
       "denoise": 1,
@@ -51,7 +51,10 @@
   },
   "6": {
     "inputs": {
-      "text": "high quality, detailed",
+      "text": [
+        "42",
+        0
+      ],
       "clip": [
         "4",
         1
@@ -119,7 +122,7 @@
   },
   "12": {
     "inputs": {
-      "image": "annehathaway (23).png",
+      "image": "annehathaway (1).png",
       "upload": "image"
     },
     "class_type": "LoadImage",
@@ -160,7 +163,7 @@
   },
   "16": {
     "inputs": {
-      "image": "Starry-Night-canvas-Vincent-van-Gogh-New-1889 (3).webp",
+      "image": "Starry-Night-canvas-Vincent-van-Gogh-New-1889.webp",
       "upload": "image"
     },
     "class_type": "LoadImage",
@@ -352,6 +355,30 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Preview Image"
+    }
+  },
+  "42": {
+    "inputs": {
+      "text1": [
+        "43",
+        0
+      ],
+      "text2": "high quality, detailed",
+      "text3": "best quality",
+      "delimiter": ","
+    },
+    "class_type": "ttN concat",
+    "_meta": {
+      "title": "textConcat"
+    }
+  },
+  "43": {
+    "inputs": {
+      "string": "a girl portrait in front a castle"
+    },
+    "class_type": "String Literal",
+    "_meta": {
+      "title": "[Input]-PositivePrompt"
     }
   }
 }
