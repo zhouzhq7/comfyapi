@@ -99,7 +99,7 @@
   },
   "6": {
     "inputs": {
-      "frames_per_batch": 32,
+      "frames_per_batch": 64,
       "count": 2
     },
     "class_type": "VHS_BatchManager",
