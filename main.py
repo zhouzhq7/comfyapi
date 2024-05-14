@@ -11,7 +11,7 @@ def main():
     #                'StyleImage': './input/Starry-Night-canvas-Vincent-van-Gogh-New-1889.png',
     #                'PositivePrompt': 'a girl portrait stand in front a river'}
     workflow = load_workflow('./workflows/FaceSwap.json')
-    user_inputs = {'SourceVideo': './input/test_1s.mp4',
+    user_inputs = {'SourceVideo': './input/test_3s.mp4',
                    'TargetFace': './input/annehathaway.png',
                    'FPS': 30}
     comfy_client.run_workflow(workflow, user_inputs)

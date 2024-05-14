@@ -93,29 +93,45 @@ def save_video(videos, output_path, save_previews):
 def track_progress(prompt, ws, prompt_id):
     node_ids = list(prompt.keys())
     finished_nodes = []
-
+    finished = True
+    has_unfinished_batch = False
     while True:
         out = ws.recv()
         if isinstance(out, str):
             message = json.loads(out)
+            # print(message)
+            data = message['data']
+            if 'output' in data:
+                if 'unfinished_batch' in message['data']['output'] and \
+                        message['data']['output']['unfinished_batch'][0] is True:
+                    print('Has unfinished batch, continue...')
+                    finished = False
+                    has_unfinished_batch = True
+                else:
+                    if has_unfinished_batch:
+                        cur_prompt_id = data['prompt_id']
+                        print(f'Finished, final prompt id {cur_prompt_id}, original prompt id {prompt_id}.')
+                    finished = True
             if message['type'] == 'progress':
-                data = message['data']
                 current_step = data['value']
                 print('In K-Sampler -> Step: ', current_step, ' of: ', data['max'])
             if message['type'] == 'execution_cached':
-                data = message['data']
                 for itm in data['nodes']:
                     if itm not in finished_nodes:
                         finished_nodes.append(itm)
                         print('Progress: ', len(finished_nodes), '/', len(node_ids), ' Tasks done')
             if message['type'] == 'executing':
-                data = message['data']
                 if data['node'] not in finished_nodes:
                     finished_nodes.append(data['node'])
                     print('Progress: ', len(finished_nodes), '/', len(node_ids), ' Tasks done')
 
-                if data['node'] is None and data['prompt_id'] == prompt_id:
-                    break  # Execution is done
+                # if data['node'] is None and data['prompt_id'] == prompt_id and not unfinished:
+                if has_unfinished_batch:
+                    if data['node'] is None and finished:
+                        break  # Execution is done
+                else:
+                    if data['node'] is None and data['prompt_id'] == prompt_id and finished:
+                        break
         else:
             continue  # previews are binary data
     return
