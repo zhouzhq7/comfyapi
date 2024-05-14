@@ -1,15 +1,20 @@
 import json
 import os.path
-import urllib.request
+import mimetypes
 import urllib.parse
+import urllib.request
 from requests_toolbelt import MultipartEncoder
 
 
-def upload_image(input_path, name, server_address, image_type="input", overwrite=True):
+def upload_media(input_path, name, server_address, image_type="input", overwrite=True):
+    mime_type, _ = mimetypes.guess_type(input_path)
+    if mime_type is None:
+        raise ValueError("Unsupported file type")
+
     with open(input_path, 'rb') as file:
         multipart_data = MultipartEncoder(
             fields={
-                'image': (name, file, 'image/png'),
+                'image': (name, file, mime_type),
                 'type': image_type,
                 'overwrite': str(overwrite).lower()
             }
@@ -25,9 +30,8 @@ def upload_image(input_path, name, server_address, image_type="input", overwrite
 def upload_data(data_to_upload, server_address, image_type="input", overwrite=True):
     for data in data_to_upload:
         print(data)
-        if data['type'] == 'image':
-            name = os.path.basename(data['filepath'])
-            upload_image(data['filepath'], name, server_address, image_type, overwrite)
+        name = os.path.basename(data['filepath'])
+        upload_media(data['filepath'], name, server_address, image_type, overwrite)
 
 
 def queue_prompt(prompt, client_id, server_address):

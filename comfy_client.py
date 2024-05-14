@@ -24,8 +24,11 @@ class ComfyClient:
             upload_data(data_to_upload, self.server_addr)
         prompt_id = queue_prompt(prompt, self.client_id, self.server_addr)['prompt_id']
         track_progress(prompt, self.ws, prompt_id)
-        images = get_images(prompt_id, self.server_addr, save_previews)
-        save_image(images, output_path, save_previews)
+        output_images, output_videos = get_outputs(prompt_id, self.server_addr, save_previews)
+        if len(output_images):
+            save_image(output_images, output_path, save_previews)
+        if len(output_videos):
+            save_video(output_videos, output_path, save_previews)
 
 
 def open_websocket_connection(ip='127.0.0.1', port=8288):
@@ -48,9 +51,14 @@ def prepare_inputs(workflow, user_inputs):
             if prompt.get(input_node)['class_type'] == 'LoadImage':
                 prompt.get(input_node)['inputs']['image'] = user_inputs.get(input_key).split('/')[-1]
                 data_to_upload.append({'filepath': user_inputs.get(input_key), 'type': 'image'})
+            elif prompt.get(input_node)['class_type'] == 'VHS_LoadVideo':
+                prompt.get(input_node)['inputs']['video'] = user_inputs.get(input_key).split('/')[-1]
+                data_to_upload.append({'filepath': user_inputs.get(input_key), 'type': 'video'})
             else:
                 if 'string' in prompt.get(input_node)['inputs']:
                     prompt.get(input_node)['inputs']['string'] = user_inputs.get(input_key)
+                elif 'value' in prompt.get(input_node)['inputs']:
+                    prompt.get(input_node)['inputs']['value'] = user_inputs.get(input_key)
                 else:
                     class_type = input_node['class_type']
                     raise TypeError(f'Input type {class_type} is not a valid input for this workflow')
@@ -113,13 +121,14 @@ def track_progress(prompt, ws, prompt_id):
     return
 
 
-def get_images(prompt_id, server_address, allow_preview=False):
+def get_outputs(prompt_id, server_address, allow_preview=False):
     output_images = []
+    output_videos = []
     history = get_history(prompt_id, server_address)[prompt_id]
     for node_id in history['outputs']:
         node_output = history['outputs'][node_id]
-        output_data = {}
         if 'images' in node_output:
+            output_data = {}
             for image in node_output['images']:
                 if allow_preview and image['type'] == 'temp':
                     preview_data = get_image(image['filename'], image['subfolder'], image['type'], server_address)
@@ -127,11 +136,23 @@ def get_images(prompt_id, server_address, allow_preview=False):
                 if image['type'] == 'output':
                     image_data = get_image(image['filename'], image['subfolder'], image['type'], server_address)
                     output_data['image_data'] = image_data
-        output_data['file_name'] = image['filename']
-        output_data['type'] = image['type']
-        output_images.append(output_data)
+                    output_data['file_name'] = image['filename']
+                    output_data['type'] = image['type']
+                    output_images.append(output_data)
+        if 'gifs' in node_output:
+            output_data = {}
+            for video in node_output['gifs']:
+                if allow_preview and video['type'] == 'temp':
+                    preview_data = get_image(video['filename'], video['subfolder'], video['type'], server_address)
+                    output_data['video_data'] = preview_data
+                if video['type'] == 'output':
+                    video_data = get_image(video['filename'], video['subfolder'], video['type'], server_address)
+                    output_data['video_data'] = video_data
+                    output_data['file_name'] = video['filename']
+                    output_data['type'] = video['type']
+                    output_videos.append(output_data)
 
-    return output_images
+    return output_images, output_videos
 
 
 def get_videos(prompt_id, server_address, allow_preview=False):
