@@ -1,0 +1,110 @@
+{
+  "1": {
+    "inputs": {
+      "enabled": true,
+      "swap_model": "inswapper_128.onnx",
+      "facedetection": "retinaface_resnet50",
+      "face_restore_model": "codeformer-v0.1.0.pth",
+      "face_restore_visibility": 1,
+      "codeformer_weight": 0.5,
+      "detect_gender_input": "no",
+      "detect_gender_source": "no",
+      "input_faces_index": "0",
+      "source_faces_index": "0",
+      "console_log_level": 1,
+      "input_image": [
+        "2",
+        0
+      ],
+      "source_image": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "ReActorFaceSwap",
+    "_meta": {
+      "title": "ReActor - Fast Face Swap"
+    }
+  },
+  "2": {
+    "inputs": {
+      "video": "test_3s.mp4",
+      "force_rate": 0,
+      "force_size": "Custom Height",
+      "custom_width": 512,
+      "custom_height": 1024,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "batch_manager": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "VHS_LoadVideo",
+    "_meta": {
+      "title": "[Input]-SourceVideo"
+    }
+  },
+  "3": {
+    "inputs": {
+      "image": "liuyifei.jpg",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "[Input]-TargetFace"
+    }
+  },
+  "4": {
+    "inputs": {
+      "frame_rate": [
+        "5",
+        0
+      ],
+      "loop_count": 0,
+      "filename_prefix": "faceswap_video",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 19,
+      "save_metadata": true,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "1",
+        0
+      ],
+      "audio": [
+        "2",
+        2
+      ],
+      "batch_manager": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "5": {
+    "inputs": {
+      "value": 30
+    },
+    "class_type": "Integer Variable [n-suite]",
+    "_meta": {
+      "title": "[Input]-FPS"
+    }
+  },
+  "6": {
+    "inputs": {
+      "frames_per_batch": 8,
+      "count": 2
+    },
+    "class_type": "VHS_BatchManager",
+    "_meta": {
+      "title": "Batch Manager 🎥🅥🅗🅢"
+    }
+  }
+}
