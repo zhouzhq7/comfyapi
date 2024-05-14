@@ -1,6 +1,7 @@
 import json
 from PIL import Image
 import io
+from logger import logger
 import os
 import websocket  # NOTE: websocket-client (https://github.com/websocket-client/websocket-client)
 import uuid
@@ -76,7 +77,7 @@ def save_image(images, output_path, save_previews):
             image = Image.open(io.BytesIO(itm['image_data']))
             image.save(os.path.join(directory, itm['file_name']))
         except Exception as e:
-            print(f"Failed to save image {itm['file_name']}: {e}")
+            logger.error(f"Failed to save image {itm['file_name']}: {e}")
 
 
 def save_video(videos, output_path, save_previews):
@@ -87,11 +88,12 @@ def save_video(videos, output_path, save_previews):
             with open(os.path.join(directory, itm['file_name']), 'wb') as f:
                 f.write(itm['video_data'])
         except Exception as e:
-            print(f"Failed to save image {itm['file_name']}: {e}")
+            logger.error(f"Failed to save image {itm['file_name']}: {e}")
 
 
 def track_progress(prompt, ws, prompt_id):
     node_ids = list(prompt.keys())
+    total_num_nodes = len(node_ids)
     finished_nodes = []
     finished = True
     has_unfinished_batch = False
@@ -105,26 +107,27 @@ def track_progress(prompt, ws, prompt_id):
             if 'output' in data:
                 if 'unfinished_batch' in message['data']['output'] and \
                         message['data']['output']['unfinished_batch'][0] is True:
-                    print('Has unfinished batch, continue...')
+                    logger.info('Has unfinished batch, continue...')
                     finished = False
                     has_unfinished_batch = True
                 else:
                     if has_unfinished_batch:
                         final_prompt_id = data['prompt_id']
-                        print(f'Finished, final prompt id {final_prompt_id}, original prompt id {prompt_id}.')
+                        logger.info(f'Finished, final prompt id {final_prompt_id}, original prompt id {prompt_id}.')
                     finished = True
             if message['type'] == 'progress':
                 current_step = data['value']
-                print('In K-Sampler -> Step: ', current_step, ' of: ', data['max'])
+                max_step = data['max']
+                logger.info(f'In K-Sampler -> Step: {current_step} of:  {max_step}')
             if message['type'] == 'execution_cached':
                 for itm in data['nodes']:
                     if itm not in finished_nodes:
                         finished_nodes.append(itm)
-                        print('Progress: ', len(finished_nodes), '/', len(node_ids), ' Tasks done')
+                        logger.info(f'Progress: {len(finished_nodes)}/{total_num_nodes} Tasks done')
             if message['type'] == 'executing':
                 if data['node'] not in finished_nodes:
                     finished_nodes.append(data['node'])
-                    print('Progress: ', len(finished_nodes), '/', len(node_ids), ' Tasks done')
+                    logger.info(f'Progress: {len(finished_nodes)}/{total_num_nodes} Tasks done')
 
                 # if data['node'] is None and data['prompt_id'] == prompt_id and not unfinished:
                 if has_unfinished_batch:

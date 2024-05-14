@@ -1,10 +1,11 @@
+from logger import logger
+
 from comfy_client import ComfyClient
 from utils import load_workflow
 
 
 def main():
-    print("Welcome to the program!")
-    # comfy_client = ComfyClient(ip='877328s68c.vicp.fun', port=43592)
+    logger.info("Welcome to the program!")
     comfy_client = ComfyClient(ip='192.168.0.21', port=8288)
     # workflow = load_workflow('./workflows/ImageStylization.json')
     # user_inputs = {'PortraitImage': './input/daisy_avatar.jpg',
@@ -15,7 +16,7 @@ def main():
                    'TargetFace': './input/annehathaway.png',
                    'FPS': 30}
     comfy_client.run_workflow(workflow, user_inputs)
-    print("Done!")
+    logger.info("Done!")
 
 
 if __name__ == '__main__':

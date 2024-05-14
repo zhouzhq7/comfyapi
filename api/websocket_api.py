@@ -5,6 +5,7 @@ import urllib.parse
 import urllib.request
 from requests_toolbelt import MultipartEncoder
 
+from logger import logger
 
 def upload_media(input_path, name, server_address, image_type="input", overwrite=True):
     mime_type, _ = mimetypes.guess_type(input_path)
@@ -29,7 +30,7 @@ def upload_media(input_path, name, server_address, image_type="input", overwrite
 
 def upload_data(data_to_upload, server_address, image_type="input", overwrite=True):
     for data in data_to_upload:
-        print(data)
+        logger.info(f'Uploading {data}...')
         name = os.path.basename(data['filepath'])
         upload_media(data['filepath'], name, server_address, image_type, overwrite)
 
